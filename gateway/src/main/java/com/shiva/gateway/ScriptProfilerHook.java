@@ -39,8 +39,8 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
         super.initializeScriptManager(manager);
         manager.addScriptModule(
                 "system.profiler",
-                profiler,
-                new PropertiesFileDocProvider()  // if you have a .properties doc file, otherwise omit
+                profiler
+//                new PropertiesFileDocProvider()  // if you have a .properties doc file, otherwise omit
         );
         log.info("Script Profiler: registered scripting API under system.profiler");
     }
