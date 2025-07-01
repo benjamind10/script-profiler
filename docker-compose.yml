@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  ignition:
+    image: inductiveautomation/ignition:8.1.40
+    container_name: ignition
+    ports:
+      - "8088:8088"  # Gateway web interface
+      - "8043:8043"  # SSL (optional)
+    volumes:
+      - ignition-data:/usr/local/bin/ignition/data
+      - ./ignition.conf:/usr/local/bin/ignition/data/ignition.conf:ro
+    environment:
+      GATEWAY_ADMIN_USERNAME: admin
+      GATEWAY_ADMIN_PASSWORD: password
+      ACCEPT_IGNITION_EULA: "Y"
+
+volumes:
+  ignition-data:
