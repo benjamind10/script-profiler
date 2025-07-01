@@ -10,5 +10,5 @@ java {
 
 dependencies {
     compileOnly("com.inductiveautomation.ignitionsdk:gateway-api:8.1.40")
-//    implementation(project(":common"))
+    implementation(project(":common"))
 }
