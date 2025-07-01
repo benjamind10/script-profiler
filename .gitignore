@@ -1,0 +1,46 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Gradle
+.gradle/
+build/
+!*/moduleContent/**            # keep moduleContent template, ignore everything else in build/
+**/build/                      # ignore each subproject’s build/
+!**/build/moduleContent/**     # except moduleContent, so modl can pick it up
+gradle-wrapper.jar
+gradle-wrapper.properties
+
+# IDEs
+# IntelliJ IDEA
+*.iml
+.idea/
+out/
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
+
+# OS Files
+Thumbs.db
+
+# Ignition module tools
+*.unsigned.modl
+*.modl
+modl-report.json
+
+# Misc
+*.swp
+*~
+.project
+.classpath
+.settings/
