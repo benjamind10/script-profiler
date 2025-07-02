@@ -1,10 +1,25 @@
 package com.shiva.common;
 
-public class ScriptProfilerRPC {
+import com.inductiveautomation.ignition.common.script.ScriptManager;
+import com.inductiveautomation.ignition.common.util.LogUtil;
+import com.inductiveautomation.ignition.common.util.LoggerEx;
 
-    public void ping() {
-        System.out.println("Profiler RPC ping received");
+public class ScriptProfilerRPC {
+    private final LoggerEx log = LogUtil.getLogger(getClass().getSimpleName());
+    private final ScriptManager scriptManager;
+
+    public ScriptProfilerRPC(ScriptManager scriptManager) {
+        this.scriptManager = scriptManager;
     }
+
+    /**
+     * Simple health check.
+     */
+    public String ping() {
+        log.info("Ping received from client.");
+        return "Script Profiler is alive";
+    }
+
 
     // add real profiling methods here, e.g.:
     public String profileNow(String scriptText) {
