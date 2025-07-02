@@ -31,7 +31,6 @@ public class ScriptProfilerDesignerHook extends AbstractDesignerModuleHook {
         log.info("Registering scripting API under system.profiler");
         manager.addScriptModule(
                 "system.profiler",
-                // give your RPC the same manager the Designer is using
                 new ScriptProfilerRPC(manager),
                 /* no doc-provider properties file */ null
         );

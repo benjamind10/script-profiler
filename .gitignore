@@ -25,3 +25,6 @@ Thumbs.db
 
 # Nix / nix-shell files (if any)
 result
+
+# ignore all Gradle build outputs in every subproject
+**/build/
