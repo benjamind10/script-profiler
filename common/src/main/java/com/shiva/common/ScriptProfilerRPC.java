@@ -23,9 +23,7 @@ public class ScriptProfilerRPC {
     }
 
 
-    // add real profiling methods here, e.g.:
     public String profileNow(String scriptText) {
-        // run your profiler and return results
         return "profiled " + scriptText.length() + " chars";
     }
 
@@ -34,13 +32,11 @@ public class ScriptProfilerRPC {
      * and report the time.
      */
     public String profileScript(String scriptPath) {
-        // fix the logger call to use simple concatenation
         log.info("Profiling existing script " + scriptPath);
 
         long start = System.nanoTime();
         Object result;
         try {
-            // wrap your function call in a tiny bit of code
             String code = String.format("return %s()", scriptPath);
             result = scriptManager;
         } catch (Exception e) {
@@ -51,7 +47,6 @@ public class ScriptProfilerRPC {
         double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
         String out = String.format("Ran %s in %.3f ms → %s", scriptPath, elapsedMs, result);
 
-        // this one is just a simple single-arg info
         log.info(out);
         return out;
     }
