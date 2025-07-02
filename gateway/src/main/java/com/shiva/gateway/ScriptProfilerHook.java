@@ -40,10 +40,9 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
     @Override
     public void initializeScriptManager(ScriptManager manager) {
         log.info("Registering system.profiler in Designer scope");
-        ScriptManager mgr = context.getScriptManager();
         manager.addScriptModule(
                 "system.profiler",
-                new ScriptProfilerRPC(mgr),
+                new ScriptProfilerRPC(manager),
                 null
         );
     }
