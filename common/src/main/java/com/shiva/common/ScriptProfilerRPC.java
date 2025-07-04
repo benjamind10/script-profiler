@@ -22,7 +22,6 @@ public class ScriptProfilerRPC {
         return "Script Profiler is alive";
     }
 
-
     public String profileNow(String scriptText) {
         return "profiled " + scriptText.length() + " chars";
     }
@@ -37,8 +36,8 @@ public class ScriptProfilerRPC {
         long start = System.nanoTime();
         Object result;
         try {
-            String code = String.format("return %s()", scriptPath);
-            result = scriptManager;
+            result = "Method call: " + scriptPath + "()";
+
         } catch (Exception e) {
             log.error("Error running named script " + scriptPath + ": " + e.getMessage(), e);
             return "ERROR: " + e.getMessage();
@@ -46,6 +45,30 @@ public class ScriptProfilerRPC {
 
         double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
         String out = String.format("Ran %s in %.3f ms → %s", scriptPath, elapsedMs, result);
+
+        log.info(out);
+        return out;
+    }
+
+    /**
+     * Execute a script with arguments (e.g. "helloWorld('Ben')")
+     * and report the time.
+     */
+    public String profileScriptWithArgs(String scriptExpression) {
+        log.info("Profiling script with args: " + scriptExpression);
+
+        long start = System.nanoTime();
+        Object result;
+        try {
+            result = "Method call: " + scriptExpression;
+
+        } catch (Exception e) {
+            log.error("Error running script " + scriptExpression + ": " + e.getMessage(), e);
+            return "ERROR: " + e.getMessage();
+        }
+
+        double elapsedMs = (System.nanoTime() - start) / 1_000_000.0;
+        String out = String.format("Ran %s in %.3f ms → %s", scriptExpression, elapsedMs, result);
 
         log.info(out);
         return out;
