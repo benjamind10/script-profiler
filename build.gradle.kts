@@ -15,7 +15,7 @@ ignitionModule {
     id.set("com.shiva.script-profiler")
 //    moduleVersion.set(project.version)
     moduleDescription.set("A module that  profiles script execution.")
-    requiredIgnitionVersion.set("8.1.40")
+    requiredIgnitionVersion.set("8.1.44")
     skipModlSigning.set(true)
 
     projectScopes.putAll(mapOf(
