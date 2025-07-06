@@ -5,12 +5,10 @@ import com.inductiveautomation.ignition.common.script.ScriptManager;
 import com.inductiveautomation.ignition.common.script.hints.PropertiesFileDocProvider;
 import com.inductiveautomation.ignition.common.util.LogUtil;
 import com.inductiveautomation.ignition.common.util.LoggerEx;
-import com.inductiveautomation.ignition.gateway.clientcomm.ClientReqSession;
 import com.inductiveautomation.ignition.gateway.model.AbstractGatewayModuleHook;
 import com.inductiveautomation.ignition.gateway.model.GatewayContext;
-import com.shiva.common.ScriptProfilerRPC;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.shiva.common.DefaultScriptProfiler;
+import com.shiva.common.ScriptProfilerFunctions;
 
 public class ScriptProfilerHook extends AbstractGatewayModuleHook {
 
@@ -20,12 +18,12 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
     @Override
     public void setup(GatewayContext gatewayContext) {
         this.context = gatewayContext;
-        log.info("Script Profiler setup");
+        log.info("Script Profiler: setup()");
     }
 
     @Override
     public void startup(LicenseState licenseState) {
-        log.info("Script Profiler: startup();");
+        log.info("Script Profiler: startup()");
     }
 
     @Override
@@ -34,16 +32,19 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
     }
 
     /**
-     * Hook into Ignition’s scripting engine so that scripts can call:
-     *   system.profiler.yourMethod(...)
+     * Register system.profiler scripting functions on the Gateway.
      */
     @Override
     public void initializeScriptManager(ScriptManager manager) {
-        log.info("Registering system.profiler in Designer scope");
+        log.info("Registering system.profiler in Gateway scope");
+
+        DefaultScriptProfiler profiler = new DefaultScriptProfiler(manager);
+        ScriptProfilerFunctions functions = new ScriptProfilerFunctions(profiler);
+
         manager.addScriptModule(
                 "system.profiler",
-                new ScriptProfilerRPC(manager),
-                null
+                functions,
+                new PropertiesFileDocProvider()
         );
     }
 }
