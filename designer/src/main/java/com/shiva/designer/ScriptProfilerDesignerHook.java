@@ -5,8 +5,10 @@ import com.inductiveautomation.ignition.common.script.ScriptManager;
 import com.inductiveautomation.ignition.common.script.hints.PropertiesFileDocProvider;
 import com.inductiveautomation.ignition.common.util.LogUtil;
 import com.inductiveautomation.ignition.common.util.LoggerEx;
+import com.inductiveautomation.ignition.designer.IgnitionDockingManager;
 import com.inductiveautomation.ignition.designer.model.AbstractDesignerModuleHook;
 import com.inductiveautomation.ignition.designer.model.DesignerContext;
+
 import com.shiva.common.DefaultScriptProfiler;
 import com.shiva.common.ScriptProfilerFunctions;
 
@@ -20,8 +22,11 @@ public class ScriptProfilerDesignerHook extends AbstractDesignerModuleHook {
      */
     @Override
     public void startup(DesignerContext context, LicenseState licenseState) {
-        this.context = context;
         log.info("Script Profiler Designer startup");
+
+        ScriptProfilerDockable dockable = new ScriptProfilerDockable();
+        IgnitionDockingManager dockingManager = (IgnitionDockingManager) context.getDockingManager();
+        dockingManager.addFrame(dockable);
     }
 
     /**
