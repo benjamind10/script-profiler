@@ -22,57 +22,39 @@ import javax.swing.SwingUtilities;
 public class ScriptProfilerDesignerHook extends AbstractDesignerModuleHook {
 
     private final LoggerEx log = LogUtil.getLogger(getClass().getSimpleName());
-    private ScriptManager scriptManager;
+    private DesignerContext context;
+    private DefaultScriptProfiler profiler;
 
-    /**
-     * Registers custom scripting functions under {@code system.profiler}.
-     * <p>
-     * This method is called automatically during Designer startup.
-     *
-     * @param manager the scripting manager provided by the Designer
-     */
     @Override
     public void initializeScriptManager(ScriptManager manager) {
         log.info("Registering scripting API under system.profiler");
 
-        // Store for use in UI layer
-        this.scriptManager = manager;
+        // Create profiler
+        this.profiler = new DefaultScriptProfiler(manager);
 
-        // Register functions and doc hints
-        DefaultScriptProfiler profiler = new DefaultScriptProfiler(manager);
+        // Register functions
         ScriptProfilerFunctions functions = new ScriptProfilerFunctions(profiler);
         manager.addScriptModule(
                 "system.profiler",
                 functions,
                 new PropertiesFileDocProvider()
         );
-    }
 
-    /**
-     * Called when the Designer is fully initialized and licensing is verified.
-     * <p>
-     * Responsible for installing UI components such as dockable panels.
-     *
-     * @param context      the current Designer context
-     * @param licenseState the current module license state
-     */
-    @Override
-    public void startup(DesignerContext context, LicenseState licenseState) {
-        log.info("Script Profiler Designer startup");
-
-        // Safely modify UI components on Swing thread
+        // Add dockable UI panel now that profiler is initialized
         SwingUtilities.invokeLater(() -> {
-            ScriptProfilerDockable dockable = new ScriptProfilerDockable(scriptManager);
+            ScriptProfilerDockable dockable = new ScriptProfilerDockable(profiler);
             IgnitionDockingManager dockingManager =
                     (IgnitionDockingManager) context.getDockingManager();
             dockingManager.addFrame(dockable);
         });
     }
 
-    /**
-     * Called when the Designer is shutting down or the module is being unloaded.
-     * Used to perform any necessary cleanup.
-     */
+    @Override
+    public void startup(DesignerContext context, LicenseState licenseState) {
+        this.context = context; // Needed for dockingManager in initializeScriptManager
+        log.info("Script Profiler Designer startup");
+    }
+
     @Override
     public void shutdown() {
         log.info("Script Profiler Designer shutdown");

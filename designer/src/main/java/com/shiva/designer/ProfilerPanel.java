@@ -1,68 +1,67 @@
 package com.shiva.designer;
 
-import com.inductiveautomation.ignition.common.script.ScriptManager;
+import com.shiva.common.DefaultScriptProfiler;
+import com.shiva.common.ScriptExecutionResult;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.util.Date;
+import java.util.List;
 
 /**
- * A simple Swing-based UI panel for running and profiling project scripts.
- * <p>
- * This panel is intended to be used inside the Ignition Designer's dockable interface.
- * Users can input a dot-separated script path, invoke it via a button, and view the result
- * in a scrollable text area.
+ * A Swing-based panel that displays recent script profiling results,
+ * including execution time, arguments, and timestamps.
  */
 public class ProfilerPanel extends JPanel {
 
-    /** Input field for the fully-qualified script path (e.g. shared.utils.testScript) */
-    private final JTextField pathField = new JTextField("shared.helloWorld");
-
-    /** Output display area for script results or error messages */
-    private final JTextArea outputArea = new JTextArea(8, 30);
-
-    /** Reference to the Designer's script manager, used to execute user scripts */
-    private final ScriptManager scriptManager;
+    private final DefaultTableModel model;
+    private final JTable table;
+    private final DefaultScriptProfiler profiler;
 
     /**
-     * Constructs a profiler panel with attached script execution support.
+     * Constructs the profiler UI panel.
      *
-     * @param scriptManager the Ignition script manager for evaluating project scripts
+     * @param profiler the instance of DefaultScriptProfiler to pull data from
      */
-    public ProfilerPanel(ScriptManager scriptManager) {
-        this.scriptManager = scriptManager;
+    public ProfilerPanel(DefaultScriptProfiler profiler) {
+        this.profiler = profiler;
         setLayout(new BorderLayout(6, 6));
 
-        // Top bar: label + input + button
-        JPanel top = new JPanel(new BorderLayout(4, 4));
-        top.add(new JLabel("Script Path:"), BorderLayout.WEST);
-        top.add(pathField, BorderLayout.CENTER);
-        JButton runBtn = new JButton("Run");
-        top.add(runBtn, BorderLayout.EAST);
+        model = new DefaultTableModel(new String[]{"Script", "Args", "Duration (ms)", "Timestamp"}, 0);
+        table = new JTable(model);
 
-        // Center: scrollable results
-        outputArea.setEditable(false);
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.addActionListener(e -> loadData());
+
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        top.add(refreshBtn);
+
         add(top, BorderLayout.NORTH);
-        add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
-        runBtn.addActionListener(this::onRun);
+        loadData();
     }
 
     /**
-     * Handles the Run button click.
-     * <p>
-     * This will eventually use the ScriptManager to execute the user-provided path.
-     * Currently placeholder logic.
-     *
-     * @param e the originating action event
+     * Loads and displays recent script execution results.
      */
-    private void onRun(ActionEvent e) {
-        String scriptPath = pathField.getText().trim();
-        try {
-            Object result = scriptManager; // TODO: Replace with actual script execution
-            outputArea.setText(result != null ? result.toString() : "null");
-        } catch (Exception ex) {
-            outputArea.setText("ERROR: " + ex.getMessage());
+    private void loadData() {
+        model.setRowCount(0); // Clear table
+
+        List<ScriptExecutionResult> results = profiler.getRecentRuns();
+        if (results == null || results.isEmpty()) {
+            model.addRow(new Object[]{"No Data", "", "", ""});
+            return;
+        }
+
+        for (ScriptExecutionResult r : results) {
+            model.addRow(new Object[]{
+                    r.path(),
+                    r.args().toString(),
+                    String.format("%.2f", r.elapsedMs()),
+                    new Date(r.timestamp()).toString()
+            });
         }
     }
 }

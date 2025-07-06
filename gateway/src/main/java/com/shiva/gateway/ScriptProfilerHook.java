@@ -39,7 +39,7 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
      */
     @Override
     public void startup(LicenseState licenseState) {
-        log.info("Script Profiler: startup()");
+        log.info("Script Profiler Designer startup");
     }
 
     /**

@@ -7,6 +7,8 @@ import org.python.core.Py;
 import org.python.core.PyObject;
 import org.python.core.PyStringMap;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,8 +18,12 @@ import java.util.List;
  * within the Ignition scripting environment, with or without arguments.
  */
 public class DefaultScriptProfiler implements ScriptProfiler {
+
+    private static final int MAX_HISTORY = 100;
+
     private final LoggerEx log = LogUtil.getLogger(getClass().getSimpleName());
     private final ScriptManager scriptManager;
+    private final List<ScriptExecutionResult> recentRuns = new ArrayList<>();
 
     /**
      * Constructs a new DefaultScriptProfiler.
@@ -105,18 +111,34 @@ public class DefaultScriptProfiler implements ScriptProfiler {
             result = raw.__tojava__(Object.class);
         } catch (Exception e) {
             log.error("Error running script '" + scriptPath + "' with args: " + e.getMessage(), e);
-            return "ERROR: " + e.getMessage();
+            result = "ERROR: " + e.getMessage();
         }
 
         double elapsedMs = (System.nanoTime() - startNanos) / 1_000_000.0;
-        String out = String.format("Ran %s(%s) in %.3f ms → %s",
-                scriptPath,
-                args.toString(),
-                elapsedMs,
-                result
-        );
+        long timestamp = System.currentTimeMillis();
 
+        ScriptExecutionResult run = new ScriptExecutionResult(scriptPath, args, elapsedMs, timestamp);
+
+        synchronized (recentRuns) {
+            recentRuns.add(run);
+            if (recentRuns.size() > MAX_HISTORY) {
+                recentRuns.remove(0);
+            }
+        }
+
+        String out = String.format("Ran %s(%s) in %.3f ms → %s", scriptPath, args, elapsedMs, result);
         log.info(out);
         return out;
+    }
+
+    /**
+     * Returns a snapshot of the recent script executions.
+     *
+     * @return list of recent profiling results
+     */
+    public List<ScriptExecutionResult> getRecentRuns() {
+        synchronized (recentRuns) {
+            return List.copyOf(recentRuns);
+        }
     }
 }
