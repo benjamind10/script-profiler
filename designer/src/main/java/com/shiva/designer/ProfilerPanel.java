@@ -1,68 +1,114 @@
 package com.shiva.designer;
 
-import com.inductiveautomation.ignition.common.script.ScriptManager;
+import com.shiva.common.DefaultScriptProfiler;
+import com.shiva.common.ScriptExecutionResult;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.Date;
+import java.util.List;
 
 /**
- * A simple Swing-based UI panel for running and profiling project scripts.
- * <p>
- * This panel is intended to be used inside the Ignition Designer's dockable interface.
- * Users can input a dot-separated script path, invoke it via a button, and view the result
- * in a scrollable text area.
+ * Swing panel for executing project scripts and viewing profiling history.
+ * Contains two tabs: one for ad-hoc execution, one for viewing recent results.
  */
 public class ProfilerPanel extends JPanel {
 
-    /** Input field for the fully-qualified script path (e.g. shared.utils.testScript) */
     private final JTextField pathField = new JTextField("shared.helloWorld");
-
-    /** Output display area for script results or error messages */
-    private final JTextArea outputArea = new JTextArea(8, 30);
-
-    /** Reference to the Designer's script manager, used to execute user scripts */
-    private final ScriptManager scriptManager;
+    private final JTextArea outputArea = new JTextArea(6, 30);
+    private final DefaultTableModel historyModel;
+    private final JTable historyTable;
+    private final DefaultScriptProfiler profiler;
 
     /**
-     * Constructs a profiler panel with attached script execution support.
+     * Constructs the profiler panel, initializing tabs and UI components.
      *
-     * @param scriptManager the Ignition script manager for evaluating project scripts
+     * @param profiler The script profiler instance used for execution and historical data
      */
-    public ProfilerPanel(ScriptManager scriptManager) {
-        this.scriptManager = scriptManager;
-        setLayout(new BorderLayout(6, 6));
+    public ProfilerPanel(DefaultScriptProfiler profiler) {
+        this.profiler = profiler;
+        setLayout(new BorderLayout());
 
-        // Top bar: label + input + button
+        JTabbedPane tabs = new JTabbedPane();
+
+        // Setup Execution tab
+        tabs.addTab("Execute", createExecutionTab());
+
+        // Setup History tab
+        historyModel = new DefaultTableModel(new String[]{"Script", "Args", "Duration (ms)", "Timestamp"}, 0);
+        historyTable = new JTable(historyModel);
+        tabs.addTab("History", createHistoryTab());
+
+        add(tabs, BorderLayout.CENTER);
+    }
+
+    /**
+     * Builds the execution tab UI for script entry and manual invocation.
+     */
+    private JPanel createExecutionTab() {
+        JPanel panel = new JPanel(new BorderLayout(6, 6));
+
         JPanel top = new JPanel(new BorderLayout(4, 4));
         top.add(new JLabel("Script Path:"), BorderLayout.WEST);
         top.add(pathField, BorderLayout.CENTER);
         JButton runBtn = new JButton("Run");
         top.add(runBtn, BorderLayout.EAST);
 
-        // Center: scrollable results
         outputArea.setEditable(false);
-        add(top, BorderLayout.NORTH);
-        add(new JScrollPane(outputArea), BorderLayout.CENTER);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
 
         runBtn.addActionListener(this::onRun);
+        return panel;
     }
 
     /**
-     * Handles the Run button click.
-     * <p>
-     * This will eventually use the ScriptManager to execute the user-provided path.
-     * Currently placeholder logic.
-     *
-     * @param e the originating action event
+     * Builds the history tab UI that displays previous script executions.
+     */
+    private JPanel createHistoryTab() {
+        JPanel panel = new JPanel(new BorderLayout(4, 4));
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.addActionListener(e -> loadData());
+
+        JPanel top = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        top.add(refreshBtn);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    /**
+     * Executes the script path entered in the input field and displays the result.
      */
     private void onRun(ActionEvent e) {
-        String scriptPath = pathField.getText().trim();
+        String path = pathField.getText().trim();
         try {
-            Object result = scriptManager; // TODO: Replace with actual script execution
-            outputArea.setText(result != null ? result.toString() : "null");
+            String result = profiler.profileScript(path);
+            outputArea.setText(result);
         } catch (Exception ex) {
             outputArea.setText("ERROR: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Loads recent profiling results into the table.
+     */
+    private void loadData() {
+        historyModel.setRowCount(0); // Clear table
+
+        List<ScriptExecutionResult> results = profiler.getRecentRuns();
+        for (ScriptExecutionResult r : results) {
+            historyModel.addRow(new Object[]{
+                    r.path(),
+                    r.args().toString(),
+                    String.format("%.2f", r.elapsedMs()),
+                    new Date(r.timestamp()).toString()
+            });
         }
     }
 }
