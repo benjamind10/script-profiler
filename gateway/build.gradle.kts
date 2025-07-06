@@ -9,6 +9,7 @@ java {
 }
 
 dependencies {
-    compileOnly("com.inductiveautomation.ignitionsdk:gateway-api:8.1.40")
+    compileOnly("com.inductiveautomation.ignitionsdk:gateway-api:8.1.44")
+    compileOnly("com.inductiveautomation.ignitionsdk:perspective-gateway:8.1.44")
     implementation(project(":common"))
 }

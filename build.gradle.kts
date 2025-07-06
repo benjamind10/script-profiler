@@ -29,3 +29,18 @@ ignitionModule {
         "com.shiva.designer.ScriptProfilerDesignerHook" to "D"
     ))
 }
+
+//tasks.register<Zip>("buildModule") {
+//    archiveFileName.set("script-profiler-${version}.modl")
+//    destinationDirectory.set(file("build/modules"))
+//
+//    from(project(":gateway").tasks.named("jar"))
+//    from(project(":common").tasks.named("jar"))
+//    from(project(":designer").tasks.named("jar"))
+//    from(project(":web").tasks.named("build"))
+//
+//    dependsOn(":gateway:jar")
+//    dependsOn(":common:jar")
+//    dependsOn(":designer:jar")
+//    dependsOn(":web:build")
+//}
