@@ -21,7 +21,7 @@ repositories {
 
 dependencies {
     // correct groupId/artifactId for ignition-common in 8.1.x:
-    compileOnly("com.inductiveautomation.ignitionsdk:ignition-common:8.1.40")
+    compileOnly("com.inductiveautomation.ignitionsdk:ignition-common:8.1.44")
 }
 
 sourceSets {

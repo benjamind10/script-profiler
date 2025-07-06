@@ -31,6 +31,7 @@ public class ScriptProfilerHook extends AbstractGatewayModuleHook {
         log.info("Script Profiler: shutdown()");
     }
 
+
     /**
      * Register system.profiler scripting functions on the Gateway.
      */
