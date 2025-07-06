@@ -27,7 +27,7 @@ dependencies {
 sourceSets {
     main {
         resources {
-            srcDir("src/main/")
+            srcDir("src/main/resources")
             include("**/*.properties")
         }
     }
