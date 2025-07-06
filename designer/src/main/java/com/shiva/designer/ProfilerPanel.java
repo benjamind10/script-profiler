@@ -6,57 +6,104 @@ import com.shiva.common.ScriptExecutionResult;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.util.Date;
 import java.util.List;
 
 /**
- * A Swing-based panel that displays recent script profiling results,
- * including execution time, arguments, and timestamps.
+ * Swing panel for executing project scripts and viewing profiling history.
+ * Contains two tabs: one for ad-hoc execution, one for viewing recent results.
  */
 public class ProfilerPanel extends JPanel {
 
-    private final DefaultTableModel model;
-    private final JTable table;
+    private final JTextField pathField = new JTextField("shared.helloWorld");
+    private final JTextArea outputArea = new JTextArea(6, 30);
+    private final DefaultTableModel historyModel;
+    private final JTable historyTable;
     private final DefaultScriptProfiler profiler;
 
     /**
-     * Constructs the profiler UI panel.
+     * Constructs the profiler panel, initializing tabs and UI components.
      *
-     * @param profiler the instance of DefaultScriptProfiler to pull data from
+     * @param profiler The script profiler instance used for execution and historical data
      */
     public ProfilerPanel(DefaultScriptProfiler profiler) {
         this.profiler = profiler;
-        setLayout(new BorderLayout(6, 6));
+        setLayout(new BorderLayout());
 
-        model = new DefaultTableModel(new String[]{"Script", "Args", "Duration (ms)", "Timestamp"}, 0);
-        table = new JTable(model);
+        JTabbedPane tabs = new JTabbedPane();
 
+        // Setup Execution tab
+        tabs.addTab("Execute", createExecutionTab());
+
+        // Setup History tab
+        historyModel = new DefaultTableModel(new String[]{"Script", "Args", "Duration (ms)", "Timestamp"}, 0);
+        historyTable = new JTable(historyModel);
+        tabs.addTab("History", createHistoryTab());
+
+        add(tabs, BorderLayout.CENTER);
+    }
+
+    /**
+     * Builds the execution tab UI for script entry and manual invocation.
+     */
+    private JPanel createExecutionTab() {
+        JPanel panel = new JPanel(new BorderLayout(6, 6));
+
+        JPanel top = new JPanel(new BorderLayout(4, 4));
+        top.add(new JLabel("Script Path:"), BorderLayout.WEST);
+        top.add(pathField, BorderLayout.CENTER);
+        JButton runBtn = new JButton("Run");
+        top.add(runBtn, BorderLayout.EAST);
+
+        outputArea.setEditable(false);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+
+        runBtn.addActionListener(this::onRun);
+        return panel;
+    }
+
+    /**
+     * Builds the history tab UI that displays previous script executions.
+     */
+    private JPanel createHistoryTab() {
+        JPanel panel = new JPanel(new BorderLayout(4, 4));
         JButton refreshBtn = new JButton("Refresh");
         refreshBtn.addActionListener(e -> loadData());
 
         JPanel top = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         top.add(refreshBtn);
 
-        add(top, BorderLayout.NORTH);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
 
-        loadData();
+        return panel;
     }
 
     /**
-     * Loads and displays recent script execution results.
+     * Executes the script path entered in the input field and displays the result.
+     */
+    private void onRun(ActionEvent e) {
+        String path = pathField.getText().trim();
+        try {
+            String result = profiler.profileScript(path);
+            outputArea.setText(result);
+        } catch (Exception ex) {
+            outputArea.setText("ERROR: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Loads recent profiling results into the table.
      */
     private void loadData() {
-        model.setRowCount(0); // Clear table
+        historyModel.setRowCount(0); // Clear table
 
         List<ScriptExecutionResult> results = profiler.getRecentRuns();
-        if (results == null || results.isEmpty()) {
-            model.addRow(new Object[]{"No Data", "", "", ""});
-            return;
-        }
-
         for (ScriptExecutionResult r : results) {
-            model.addRow(new Object[]{
+            historyModel.addRow(new Object[]{
                     r.path(),
                     r.args().toString(),
                     String.format("%.2f", r.elapsedMs()),

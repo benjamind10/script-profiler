@@ -20,15 +20,15 @@ public class ScriptProfilerDockable extends DockableFrame {
      * @param profiler the DefaultScriptProfiler used to retrieve recent script executions
      */
     public ScriptProfilerDockable(DefaultScriptProfiler profiler) {
-        super("script-profiler");            // Unique internal frame key
-        setTitle("Script Profiler");         // Title shown in the tab UI
-        setFrameIcon(null);                  // Optional icon (can be null)
+        super("script-profiler"); // Unique internal frame key
+        setTitle("Script Profiler"); // Title shown in the docking tab
+        setFrameIcon(null); // Optional icon for the dockable frame
 
-        // Configure initial docking state and sizing
+        // Configure initial state and sizing
         getContext().setInitMode(DockContext.STATE_AUTOHIDE);
         setPreferredSize(new Dimension(400, 300));
 
-        // Add the main profiler UI panel
+        // Add the profiling panel to the frame content
         getContentPane().add(new ProfilerPanel(profiler));
     }
 }
