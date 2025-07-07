@@ -21,19 +21,20 @@ import java.util.List;
 
 /**
  * Swing panel for executing project scripts and viewing profiling history.
- * Contains two tabs: one for ad-hoc execution (with status, summary, args input, and bar chart),
+ * Contains two tabs: one for ad-hoc execution (with dynamic script dropdown, status, summary, args input, and bar chart),
  * and one for viewing history.
  */
 public class ProfilerPanel extends JPanel {
 
     // Execution tab components
-    private final JTextField pathField = new JTextField("shared.helloWorld");
+    private final JComboBox<String> scriptCombo = new JComboBox<>();
     private final JTextField argsField = new JTextField();
     private final JButton runBtn = new JButton("Run");
     private final JLabel statusLabel = new JLabel(" ");
     private final JLabel lastRunLabel = new JLabel("Last: N/A");
     private final JLabel avgLabel = new JLabel("Avg: N/A");
     private final JLabel maxLabel = new JLabel("Max: N/A");
+    private final JTextArea previewArea = new JTextArea(4, 30);
     private final JTextArea outputArea = new JTextArea(6, 30);
     private ChartPanel chartPanel;
 
@@ -46,16 +47,26 @@ public class ProfilerPanel extends JPanel {
 
     /**
      * Constructs the profiler panel, initializing tabs and UI components.
-     *
      * @param profiler The script profiler instance used for execution and history data
      */
     public ProfilerPanel(DefaultScriptProfiler profiler) {
         this.profiler = profiler;
         setLayout(new BorderLayout());
 
+        // setup combo as editable dropdown
+        scriptCombo.setEditable(true);
+        scriptCombo.addItem("shared.helloWorld");
+
         // enable text wrapping for output area
         outputArea.setLineWrap(true);
         outputArea.setWrapStyleWord(true);
+
+        // setup preview area
+        previewArea.setLineWrap(true);
+        previewArea.setWrapStyleWord(true);
+        previewArea.setEditable(false);
+        previewArea.setBackground(new Color(248, 248, 248));
+        previewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.addTab("Execute", createExecutionTab());
@@ -65,16 +76,23 @@ public class ProfilerPanel extends JPanel {
         tabs.addTab("History", createHistoryTab());
 
         add(tabs, BorderLayout.CENTER);
+
+        // Add listener to update preview when script selection changes
+        scriptCombo.addActionListener(e -> updatePreview());
+        scriptCombo.getEditor().getEditorComponent().addPropertyChangeListener("value", e -> updatePreview());
+
+        // Load initial preview
+        updatePreview();
     }
 
-    /** Builds the execution tab with input, args, status, summary, bar chart, and output. */
+    /** Builds the execution tab with dropdown, args, status, summary, bar chart, preview, and output. */
     private JPanel createExecutionTab() {
         JPanel panel = new JPanel(new BorderLayout(6,6));
 
-        // Script path row
+        // Script dropdown row
         JPanel inputRow = new JPanel(new BorderLayout(4,4));
-        inputRow.add(new JLabel("Script Path:"), BorderLayout.WEST);
-        inputRow.add(pathField, BorderLayout.CENTER);
+        inputRow.add(new JLabel("Script:"), BorderLayout.WEST);
+        inputRow.add(scriptCombo, BorderLayout.CENTER);
         inputRow.add(runBtn, BorderLayout.EAST);
 
         // Arguments row
@@ -108,58 +126,33 @@ public class ProfilerPanel extends JPanel {
         topWrapper.add(summaryPanel, BorderLayout.CENTER);
         topWrapper.add(chartPanel, BorderLayout.SOUTH);
 
+        // Create center section with preview and output
+        JPanel centerSection = new JPanel(new BorderLayout(4,4));
+
+        // Preview section with label
+        JPanel previewPanel = new JPanel(new BorderLayout(2,2));
+        previewPanel.add(new JLabel("Script Preview:"), BorderLayout.NORTH);
+        previewPanel.add(new JScrollPane(previewArea), BorderLayout.CENTER);
+        previewPanel.setBorder(BorderFactory.createTitledBorder("Preview"));
+
+        // Output section with label
+        JPanel outputPanel = new JPanel(new BorderLayout(2,2));
+        outputPanel.add(new JLabel("Output:"), BorderLayout.NORTH);
+        outputPanel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        outputPanel.setBorder(BorderFactory.createTitledBorder("Execution Output"));
+
+        // Split preview and output vertically
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, previewPanel, outputPanel);
+        splitPane.setResizeWeight(0.3); // Give preview 30% of space
+        splitPane.setOneTouchExpandable(true);
+
+        centerSection.add(splitPane, BorderLayout.CENTER);
+
         panel.add(topWrapper, BorderLayout.NORTH);
-        panel.add(new JScrollPane(outputArea), BorderLayout.CENTER);
+        panel.add(centerSection, BorderLayout.CENTER);
 
         runBtn.addActionListener(this::onRun);
         return panel;
-    }
-
-    /** Creates an empty bar chart for initialization. */
-    private JFreeChart createEmptyDatasetChart() {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        JFreeChart chart = ChartFactory.createBarChart(
-                "Last Runs",   // chart title
-                "Run #",      // domain axis label
-                "Duration (ms)", // range axis label
-                dataset,       // data
-                PlotOrientation.VERTICAL,
-                false,         // include legend
-                true,          // tooltips
-                false          // URLs
-        );
-        // ensure bars are colored
-        CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, new Color(200, 50, 50));
-        return chart;
-    }
-
-    /** Updates the bar chart with the last 5 run durations. */
-    private void updateChart() {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        List<ScriptExecutionResult> runs = profiler.getRecentRuns();
-        int size = runs.size();
-        int start = Math.max(0, size - 5);
-        for (int i = start; i < size; i++) {
-            ScriptExecutionResult r = runs.get(i);
-            String runLabel = "#" + (i - start + 1);
-            dataset.addValue(r.elapsedMs(), "Duration", runLabel);
-        }
-        JFreeChart chart = ChartFactory.createBarChart(
-                "Last " + Math.min(5, size) + " Runs", // chart title
-                "Run #",      // domain axis label
-                "Duration (ms)", // range axis label
-                dataset,
-                PlotOrientation.VERTICAL,
-                false,
-                true,
-                false
-        );
-        CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, new Color(200, 50, 50));
-        chartPanel.setChart(chart);
     }
 
     /** Builds the history tab UI that displays previous script executions. */
@@ -176,11 +169,47 @@ public class ProfilerPanel extends JPanel {
         return panel;
     }
 
-    /**
-     * Executes the script with arguments, and updates output, status, summary, chart.
-     */
+    /** Updates the script preview area with the content of the selected script. */
+    private void updatePreview() {
+        String scriptPath = getSelectedScriptPath();
+        if (scriptPath == null || scriptPath.trim().isEmpty()) {
+            previewArea.setText("No script selected");
+            return;
+        }
+
+        try {
+            // Attempt to get script content from profiler
+            String scriptContent = profiler.getScriptContent(scriptPath);
+            if (scriptContent != null && !scriptContent.trim().isEmpty()) {
+                previewArea.setText(scriptContent);
+            } else {
+                previewArea.setText("Script content not available or empty");
+            }
+        } catch (Exception e) {
+            previewArea.setText("Error loading script: " + e.getMessage());
+        }
+    }
+
+    /** Gets the currently selected script path from the combo box. */
+    private String getSelectedScriptPath() {
+        Object selected = scriptCombo.getEditor().getItem();
+        return selected != null ? selected.toString().trim() : null;
+    }
+
+    /** Executes the script with arguments, and updates output, status, summary, chart. */
     private void onRun(ActionEvent e) {
-        String path = pathField.getText().trim();
+        String path = getSelectedScriptPath();
+        if (path == null || path.isEmpty()) {
+            outputArea.setText("ERROR: No script selected");
+            updateStatus(false);
+            return;
+        }
+
+        // add new scripts to dropdown
+        if (((DefaultComboBoxModel<String>)scriptCombo.getModel()).getIndexOf(path) < 0) {
+            scriptCombo.addItem(path);
+        }
+
         List<Object> args = new ArrayList<>();
         String raw = argsField.getText().trim();
         if (!raw.isEmpty()) {
@@ -204,7 +233,53 @@ public class ProfilerPanel extends JPanel {
         updateChart();
     }
 
-    /** Updates the status label (green "SUCCESS" or red "ERROR"). */
+    /** Creates an empty bar chart for initialization. */
+    private JFreeChart createEmptyDatasetChart() {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Last Runs",
+                "Run #",
+                "Duration (ms)",
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                true,
+                false
+        );
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, new Color(200, 50, 50));
+        return chart;
+    }
+
+    /** Updates the bar chart with the last 5 run durations. */
+    private void updateChart() {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        List<ScriptExecutionResult> runs = profiler.getRecentRuns();
+        int size = runs.size();
+        int start = Math.max(0, size - 5);
+        for (int i = start; i < size; i++) {
+            ScriptExecutionResult r = runs.get(i);
+            String runLabel = "#" + (i - start + 1);
+            dataset.addValue(r.elapsedMs(), "Duration", runLabel);
+        }
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Last " + Math.min(5, size) + " Runs",
+                "Run #",
+                "Duration (ms)",
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                true,
+                false
+        );
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, new Color(200, 50, 50));
+        chartPanel.setChart(chart);
+    }
+
+    /** Updates the status label (green "✓ SUCCESS" or red "✗ ERROR"). */
     private void updateStatus(boolean success) {
         if (success) {
             statusLabel.setText("✓ SUCCESS");

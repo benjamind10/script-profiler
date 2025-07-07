@@ -76,4 +76,16 @@ public class ScriptProfilerFunctions {
         }
         return delegate.profileScriptWithArgs(scriptPath, javaArgs);
     }
+
+    /**
+     * Retrieves the source code content of a script for preview purposes.
+     * <p>
+     * Exposed as {@code system.profiler.getScriptContent("path.to.script")}.
+     *
+     * @param scriptPath dot-separated path to the script function
+     * @return the script source code as a string, or an appropriate message if unavailable
+     */
+    public String getScriptContent(String scriptPath) {
+        return delegate.getScriptContent(scriptPath);
+    }
 }

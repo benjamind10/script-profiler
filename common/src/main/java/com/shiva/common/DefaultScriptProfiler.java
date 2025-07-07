@@ -13,125 +13,86 @@ import java.util.List;
 /**
  * Default implementation of the {@link ScriptProfiler} interface.
  * <p>
- * This class provides functionality to execute and time user-created project scripts
- * within the Ignition scripting environment. It explicitly blocks system scripts
- * (those starting with "system.") to restrict profiling to user-defined code.
+ * Provides timing of user‐created project scripts only, and maintains a short history.
  */
 public class DefaultScriptProfiler implements ScriptProfiler {
 
     private static final int MAX_HISTORY = 100;
+
     private final LoggerEx log = LogUtil.getLogger(getClass().getSimpleName());
     private final ScriptManager scriptManager;
     private final List<ScriptExecutionResult> recentRuns = new ArrayList<>();
 
     /**
-     * Constructs a new DefaultScriptProfiler.
-     *
-     * @param scriptManager the ScriptManager used to execute project scripts
+     * @param scriptManager the Ignition ScriptManager used to execute project scripts
      */
     public DefaultScriptProfiler(ScriptManager scriptManager) {
         this.scriptManager = scriptManager;
     }
 
-    /**
-     * Simple health check to confirm the profiler is responsive.
-     *
-     * @return a static string indicating the profiler is alive
-     */
     @Override
     public String ping() {
         log.info("Ping received from client.");
         return "Script Profiler is alive";
     }
 
-    /**
-     * Profiles the execution of the given script text. Currently returns length.
-     *
-     * @param scriptText the raw script content to profile
-     * @return summary of profiling (character count)
-     */
     @Override
     public String profileNow(String scriptText) {
         return "profiled " + scriptText.length() + " chars";
     }
 
-    /**
-     * Profiles a named script with no arguments.
-     *
-     * @param scriptPath dot-separated path to the script (e.g. shared.utils.myFunc)
-     * @return execution summary including timing
-     */
     @Override
     public String profileScript(String scriptPath) {
         return profileScriptWithArgs(scriptPath, List.of());
     }
 
-    /**
-     * Profiles a named script with the provided arguments.
-     * Blocks any paths starting with "system.".
-     *
-     * @param scriptPath the dot-separated path to the script function
-     * @param args       arguments to pass to the script
-     * @return execution summary including timing and result, or error message
-     */
     @Override
     public String profileScriptWithArgs(String scriptPath, List<Object> args) {
         log.info("Profiling script with args: " + scriptPath + ", args=" + args);
 
-        long startNanos = System.nanoTime();
+        long start = System.nanoTime();
         Object result;
 
         try {
-            // Block system scripts
             if (scriptPath.startsWith("system.")) {
-                throw new IllegalArgumentException(
-                        "Profiling of system.* scripts is not permitted.");
+                throw new IllegalArgumentException("Profiling system.* scripts is not permitted.");
             }
 
             String[] parts = scriptPath.split("\\.");
             if (parts.length < 2) {
-                throw new IllegalArgumentException(
-                        "Script path must contain at least module and function");
+                throw new IllegalArgumentException("Path must have at least one module and one function");
             }
 
-            String rootModule = parts[0];
+            String root = parts[0];
             PyStringMap locals = new PyStringMap();
 
-            // Import root module
-            scriptManager.runCode(
-                    "import " + rootModule,
-                    locals,
-                    "<import:" + rootModule + ">"
-            );
+            // import the root module
+            scriptManager.runCode("import " + root, locals, "<import:" + root + ">");
 
-            // Resolve function via nested attributes
-            PyObject current = locals.__getitem__(rootModule);
+            // walk down to the function
+            PyObject current = locals.__getitem__(root);
             for (int i = 1; i < parts.length; i++) {
                 current = current.__getattr__(parts[i]);
             }
 
-            // Convert Java args to PyObjects
+            // convert Java args → PyObject[]
             PyObject[] pyArgs = args.stream()
                     .map(Py::java2py)
                     .toArray(PyObject[]::new);
 
-            // Execute the function
             PyObject raw = scriptManager.runFunction(current, pyArgs);
             result = raw.__tojava__(Object.class);
         }
         catch (Exception e) {
-            log.error("Error running script '" + scriptPath + "' with args: "
-                    + e.getMessage(), e);
+            log.error("Error running '" + scriptPath + "': " + e.getMessage(), e);
             result = "ERROR: " + e.getMessage();
         }
 
-        double elapsedMs = (System.nanoTime() - startNanos) / 1_000_000.0;
-        long timestamp = System.currentTimeMillis();
+        double elapsed = (System.nanoTime() - start) / 1_000_000.0;
+        long ts = System.currentTimeMillis();
 
-        ScriptExecutionResult run = new ScriptExecutionResult(
-                scriptPath, args, elapsedMs, timestamp
-        );
-
+        // record history
+        ScriptExecutionResult run = new ScriptExecutionResult(scriptPath, args, elapsed, ts);
         synchronized (recentRuns) {
             recentRuns.add(run);
             if (recentRuns.size() > MAX_HISTORY) {
@@ -139,22 +100,102 @@ public class DefaultScriptProfiler implements ScriptProfiler {
             }
         }
 
-        String out = String.format(
-                "Ran %s(%s) in %.3f ms → %s",
-                scriptPath, args, elapsedMs, result
-        );
+        String out = String.format("Ran %s(%s) in %.3f ms → %s",
+                scriptPath, args, elapsed, result);
         log.info(out);
         return out;
     }
 
     /**
-     * Returns an immutable snapshot of recent profiling runs.
-     *
-     * @return list of ScriptExecutionResult
+     * @return an immutable list of the recent profiling runs
      */
     public List<ScriptExecutionResult> getRecentRuns() {
         synchronized (recentRuns) {
             return List.copyOf(recentRuns);
         }
+    }
+
+    /**
+     * Exposes the underlying ScriptManager for introspection or UI use.
+     */
+    public ScriptManager getScriptManager() {
+        return scriptManager;
+    }
+
+    /**
+     * Retrieves the first few lines of a user script’s source code for preview.
+     * Blocks any path starting with "system.".
+     *
+     * @param scriptPath e.g. "shared.myFunc"
+     * @return either the first 3 lines of source, or an explanatory error
+     */
+    public String getScriptContent(String scriptPath) {
+        log.debug("Getting script content for: " + scriptPath);
+
+        if (scriptPath.startsWith("system.")) {
+            return "Preview unavailable for system.* scripts.";
+        }
+        if (scriptPath.isBlank()) {
+            return "No script path provided.";
+        }
+
+        String[] parts = scriptPath.split("\\.");
+        if (parts.length < 2) {
+            return "Invalid path; needs module and function (e.g. shared.myFunc)";
+        }
+
+        String root = parts[0];
+        PyStringMap locals = new PyStringMap();
+
+        try {
+            scriptManager.runCode("import " + root, locals, "<import:" + root + ">");
+        }
+        catch (Exception e) {
+            return "Error importing module '" + root + "': " + e.getMessage();
+        }
+
+        // drill down
+        PyObject current = locals.__getitem__(root);
+        StringBuilder full = new StringBuilder(root);
+        try {
+            for (int i = 1; i < parts.length; i++) {
+                current = current.__getattr__(parts[i]);
+                full.append(".").append(parts[i]);
+            }
+        }
+        catch (Exception e) {
+            return "Error navigating to '" + scriptPath + "': " + e.getMessage();
+        }
+
+        // attempt inspect.getsource
+        try {
+            PyStringMap inspectLocals = new PyStringMap();
+            String code =
+                    "import inspect\n" +
+                            "import " + root + "\n" +
+                            "func = " + full + "\n" +
+                            "src = None\n" +
+                            "try:\n" +
+                            "    src = inspect.getsource(func)\n" +
+                            "except:\n" +
+                            "    pass\n" +
+                            "result = src";
+            scriptManager.runCode(code, inspectLocals, "<getsource>");
+            PyObject srcObj = inspectLocals.__getitem__(Py.newString("result"));
+            String src = srcObj == null ? null : srcObj.toString();
+            if (src != null) {
+                // take first 3 lines
+                String[] lines = src.split("\\R", 4);
+                StringBuilder preview = new StringBuilder();
+                preview.append("=== ").append(scriptPath).append(" ===\n\n");
+                for (int i = 0; i < Math.min(3, lines.length); i++) {
+                    preview.append(lines[i]).append("\n");
+                }
+                return preview.toString();
+            }
+        }
+        catch (Exception ignored) {}
+
+        return "Source not available for " + scriptPath;
     }
 }
