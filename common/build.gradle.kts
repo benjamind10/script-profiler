@@ -36,16 +36,3 @@ sourceSets {
 tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
-
-sourceSets {
-    main {
-        resources {
-            srcDir("src/main/resources")
-            include("**/*.properties")
-        }
-    }
-}
-
-tasks.processResources {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
