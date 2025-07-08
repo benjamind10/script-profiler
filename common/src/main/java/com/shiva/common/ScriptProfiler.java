@@ -43,4 +43,13 @@ public interface ScriptProfiler {
      * @return the result of executing the script, including execution time and returned value
      */
     String profileScriptWithArgs(String scriptPath, List<Object> args);
+
+    /**
+     * Retrieves the source code content of a script for preview purposes.
+     * This method allows users to view the script content before execution.
+     *
+     * @param scriptPath the qualified path to the script function (e.g. {@code shared.utils.myFunc})
+     * @return the script source code as a string, or an appropriate message if the source is not available
+     */
+    String getScriptContent(String scriptPath);
 }
