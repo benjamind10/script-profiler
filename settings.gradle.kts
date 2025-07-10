@@ -15,4 +15,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "script-profiler"
-include("common", "gateway", "designer", "web")
+include("common", "gateway", "designer")
